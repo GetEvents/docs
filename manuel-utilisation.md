@@ -10,15 +10,16 @@ GetEvent est une application web permettant de créer, publier, rechercher et g�
 | --- | --- |
 | Participant | Consulter les événements, s'inscrire, payer, consulter ses billets |
 | Organisateur | Créer des événements, suivre les participants, scanner les billets, demander un retrait |
-| Administrateur technique | Superviser le déploiement, les variables d'environnement et les journaux serveur |
+| Administrateur | Administrer les utilisateurs, les événements, certains messages, remboursements et retraits |
 
 ## Créer un compte
 
 1. Ouvrir la page d'inscription.
 2. Renseigner les informations personnelles.
-3. Choisir un rôle.
+3. Choisir le rôle Participant ou Organisateur. Pour un compte organisateur, le pays, le numéro de téléphone et la majorité sont requis.
 4. Valider le formulaire.
-5. Confirmer le compte si une vérification par e-mail est effectuée.
+5. Ouvrir l'e-mail de vérification et suivre le lien de confirmation.
+6. Après validation de l'adresse, un e-mail de bienvenue confirme la fin du parcours de vérification.
 
 ## Se connecter
 
@@ -67,11 +68,15 @@ La messagerie permet d'échanger autour d'un événement. Les messages sont tran
 
 Les notifications informent l'utilisateur des actions importantes : inscription, rappel, paiement, remboursement, message ou changement d'état.
 
-## Problèmes fréquents
+## Administration
 
-| Problème | Solution | Priorité |
-| --- | --- | --- |
-| Mot de passe oublié | Utiliser la page de récupération | Haute |
-| Paiement interrompu | Revenir sur l'événement et recommencer | Haute |
-| QR code non reconnu | Vérifier que le billet correspond au bon événement | Moyenne |
-| Caméra inaccessible | Autoriser la caméra dans le navigateur | Moyenne |
+Le rôle `ADMIN` accède au tableau de bord avec des droits étendus. Il peut notamment consulter les utilisateurs, gérer les événements, traiter les remboursements et retraits et supprimer les messages d'un événement lorsque cela est nécessaire.
+
+## Assistance utilisateur
+
+| Situation | Action à effectuer |
+| --- | --- |
+| Mot de passe oublié | Utiliser la page de récupération du mot de passe |
+| Paiement interrompu | Revenir sur la fiche de l'événement et relancer le parcours de paiement |
+| QR code non reconnu | Vérifier que le billet présenté correspond à l'événement sélectionné |
+| Caméra inaccessible | Autoriser l'accès à la caméra dans les paramètres du navigateur |

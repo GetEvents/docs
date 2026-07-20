@@ -2,113 +2,111 @@
 
 ## Objectif
 
-Ce manuel explique comment déployer GetEvent en environnement de production.
+Ce manuel décrit le déploiement automatisé actuel de GetEvent : le backend est publié sous forme d'image Docker puis déployé sur Render, tandis que le frontend est déployé sur Netlify.
 
 ## Environnements
 
 | Environnement | Usage |
 | --- | --- |
 | Développement | Travail local du développeur |
-| Test | Vérification avant mise en production |
-| Production | Version stable accessible aux utilisateurs |
+| Intégration | Vérification automatique sur la branche `develop` |
+| Production | Déploiement depuis la branche `main` |
 
-## Prérequis serveur
+## Prérequis
 
-- VPS Linux.
-- Docker et Docker Compose installés.
-- Accès SSH.
-- Accès à GitHub Container Registry.
-- Variables d'environnement configurées.
-- Base PostgreSQL accessible.
+- Dépôts GitHub configurés avec GitHub Actions.
+- Service backend Render relié à l'image Docker GetEvent.
+- Site frontend Netlify configuré pour construire l'application Next.js.
+- Base PostgreSQL de production accessible depuis Render.
+- Variables et secrets configurés dans GitHub, Render et Netlify.
 
-## Déploiement backend
+## Déploiement backend sur Render
 
-Le backend est déployé via GitHub Actions :
+Le workflow `GetEvent_back/.github/workflows/deploy.yml` est lancé lors d'un push sur `main` ou manuellement avec `workflow_dispatch`.
 
-1. Le code est fusionné sur la branche `main`.
-2. GitHub Actions construit l'image Docker.
-3. L'image est publiée sur GitHub Container Registry.
-4. Le workflow se connecte au VPS.
-5. Le fichier `docker-compose.yml` est copié.
-6. Le VPS télécharge la nouvelle image.
-7. Le conteneur est redémarré.
+Il effectue les opérations suivantes :
 
-Commande équivalente sur le serveur :
+1. Construction de l'image à partir du `Dockerfile` backend.
+2. Publication dans GitHub Container Registry sous `ghcr.io/getevents/getevent-back`.
+3. Publication des tags `latest` et `sha`.
+4. Appel du hook Render afin de déclencher le déploiement.
 
-```bash
-cd /opt/getevent-back
-docker compose pull
-docker compose up -d
+Secret GitHub requis :
+
+```text
+RENDER_DEPLOY_HOOK_URL
 ```
 
-## Déploiement frontend
+Les variables applicatives du backend, notamment `DATABASE_URL`, les secrets JWT, les clés de paiement et `SENTRY_DSN`, doivent être définies dans l'environnement Render. Le fichier `.env` local ne doit jamais être déployé.
 
-En production sur VPS, le fichier `docker-compose.yml` attend une image :
+## Déploiement frontend sur Netlify
 
-```txt
-ghcr.io/getevents/getevent-front:latest
+Le workflow `GetEvent_front/.github/workflows/deploy.yml` est lancé lors d'un push sur `main` ou manuellement.
+
+Avant le déploiement, il :
+
+1. installe les dépendances avec `npm ci` ;
+2. exécute `npm run lint` ;
+3. vérifie le build avec `npm run build` ;
+4. appelle le hook de production Netlify.
+
+Secret GitHub requis :
+
+```text
+NETLIFY_BUILD_HOOK_URL
 ```
 
-La publication automatique de cette image est gérée par le workflow :
-
-```txt
-GetEvent_front/.github/workflows/deploy.yml
-```
-
-Le workflow construit l'image, pousse les tags `latest` et `sha`, copie `docker-compose.yml` sur le VPS, puis redémarre le conteneur frontend.
-
-Variables GitHub Actions à configurer pour le build frontend :
+Variables GitHub Actions utilisées pour la validation du build :
 
 - `NEXT_PUBLIC_API_URL`
 - `NEXT_PUBLIC_API_ENDPOINT`
 - `NEXT_PUBLIC_SOCKET_URL`
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+- `NEXT_PUBLIC_GOOGLE_MAP_ID`
 - `API_INTERNAL_URL`
 
-Les variables `NEXT_PUBLIC_*` sont publiques côté navigateur. Elles ne doivent pas contenir de secrets privés. La variable `API_INTERNAL_URL` est utilisée par Next.js côté serveur, notamment dans le proxy d'authentification, pour joindre l'API depuis le conteneur.
+Ces variables doivent également être cohérentes avec celles configurées dans Netlify. Les variables `NEXT_PUBLIC_*` sont intégrées au code envoyé au navigateur et ne doivent contenir aucun secret privé.
 
 ## Base de données
 
-En production, appliquer les migrations avec :
+La variable `DATABASE_URL` doit pointer vers PostgreSQL en production. Lorsqu'une migration Prisma est ajoutée, elle doit être appliquée dans l'environnement de production avec :
 
 ```bash
 npx prisma migrate deploy
 ```
 
-La variable `DATABASE_URL` doit pointer vers la base PostgreSQL de production.
+Cette étape doit être exécutée depuis un environnement autorisé à joindre la base, avant ou pendant la mise en production de la version qui dépend du nouveau schéma.
 
 ## Vérification après déploiement
 
-| Élément à vérifier | Méthode de contrôle | Résultat attendu | Statut de validation |
-| --- | --- | --- | --- |
-| Disponibilité de l'API | Requête HTTP `GET /health` sur l'URL du VPS. | Réponse HTTP 200 OK avec payload de statut. | Conforme |
-| Intégrité des conteneurs | Lecture des journaux via `docker compose logs -f`. | Démarrage complet des services, absence d'erreur critique ou de crash loop. | Conforme |
-| Authentification | Tentative de connexion via le proxy d'authentification. | Vérification d'identité réussie, génération et stockage des tokens JWT et Refresh Token. | Conforme |
-| Persistance des données | Chargement de la page de recherche/liste des événements. | Requête Prisma exécutée avec succès, données hydratées et affichées côté client. | Conforme |
-| Passerelle de paiement | Simulation d'une inscription payante via l'environnement Sandbox. | Webhook ou callback Stripe/FedaPay reçu et validé par l'API, passage du billet à l'état valide. | Conforme |
-| Temps réel et supervision | Connexion au serveur de messagerie Socket.IO. | Handshake Socket.IO valide, transmission instantanée des messages et des notifications. | Conforme |
-| Qualité et observabilité | Inspection du dashboard centralisé Sentry de production. | Flux de monitoring actif et absence d'exceptions ou d'anomalies non capturées suite au déploiement. | Conforme |
+| Élément | Contrôle | Résultat attendu |
+| --- | --- | --- |
+| Workflow backend | GitHub Actions puis événements Render | Image publiée et déploiement terminé |
+| API | `GET /health` sur l'URL Render | Réponse HTTP 200 avec un statut sain |
+| Workflow frontend | GitHub Actions puis déploiements Netlify | Build et déploiement terminés |
+| Interface | Ouvrir l'URL Netlify | Page d'accueil chargée sans erreur |
+| Authentification | Inscription puis connexion | Session créée correctement |
+| Événements | Consultation et création autorisée | Données enregistrées et affichées |
+| Paiement | Transaction de test en environnement sandbox | Callback ou webhook traité |
+| Temps réel | Messagerie et notifications | Connexion Socket.IO fonctionnelle |
+| Supervision | Tableau de bord Sentry | Événements reçus avec le bon environnement |
 
-## Rollback
+## Retour à une version stable
 
-En cas d'incident :
+### Backend
 
-1. Identifier l'image Docker précédente.
-2. Modifier le tag dans `docker-compose.yml`.
-3. Exécuter :
+Redéployer sur Render une image ou une révision antérieure connue comme stable. Si une migration a modifié le schéma, préparer une migration corrective : ne pas utiliser `migrate dev` en production.
 
-```bash
-docker compose pull
-docker compose up -d
-```
+### Frontend
 
-4. Vérifier `/health`.
-5. Documenter l'incident dans le plan de correction des bogues.
+Utiliser la fonction de restauration d'un déploiement antérieur dans Netlify ou rétablir la dernière version validée, puis relancer le workflow.
+
+Après la restauration, vérifier `/health`, l'authentification, les événements et les parcours de paiement, puis consigner l'analyse et les actions réalisées dans le suivi de maintenance.
 
 ## Sécurité des secrets
 
-Les fichiers `.env` ne doivent pas être versionnés ni livrés. Les secrets doivent être stockés :
-
-- dans les GitHub Secrets ;
-- dans les variables serveur ;
-- dans un gestionnaire de secrets si disponible.
+- Ne jamais versionner ni livrer `.env` ou `.env.local`.
+- Utiliser les GitHub Secrets uniquement pour les hooks de déploiement et les autres valeurs réellement secrètes.
+- Configurer les secrets applicatifs dans Render et Netlify selon leur lieu d'utilisation.
+- Ne jamais placer une clé privée dans une variable `NEXT_PUBLIC_*`.
+- Révoquer immédiatement toute valeur exposée et la remplacer dans tous les environnements.
