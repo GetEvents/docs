@@ -1,4 +1,4 @@
-# 10.2 Manuel d'utilisation
+# 13.2 Manuel d'utilisation
 
 ## Présentation
 
