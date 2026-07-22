@@ -1,5 +1,7 @@
 # 13.1 Manuel de déploiement
 
+Les URL publiques du frontend, du backend et de la documentation Swagger sont regroupées dans [URL de production de GetEvent](./urls-production.md).
+
 ## Objectif
 
 Ce manuel décrit le déploiement automatisé actuel de GetEvent : le backend est publié sous forme d'image Docker puis déployé sur Render, tandis que le frontend est déployé sur Netlify.
