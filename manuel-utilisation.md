@@ -40,11 +40,12 @@ Une connexion Google OAuth est également disponible.
 
 ## Participer à un événement
 
-1. Ouvrir la liste des événements.
-2. Consulter le détail d'un événement.
-3. Cliquer sur le bouton de participation.
-4. Si l'événement est payant, effectuer le paiement.
-5. Une fois la participation validée, le billet apparaît dans l'espace participation.
+1. Se connecter à l'application.
+2. Ouvrir la liste des événements.
+3. Consulter le détail d'un événement. La fiche détaillée nécessite une session authentifiée.
+4. Cliquer sur le bouton de participation.
+5. Si l'événement est payant, effectuer le paiement.
+6. Une fois la participation validée, le billet apparaît dans l'espace participation.
 
 ## Consulter un billet
 
